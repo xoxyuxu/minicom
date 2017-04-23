@@ -3,7 +3,7 @@ dnl configure.in autoconf/automake input script
 dnl for minicom
 dnl
 
-AC_INIT([minicom], [2.7], [minicom-devel@lists.alioth.debian.org])
+AC_INIT([minicom], [2.7.1], [minicom-devel@lists.alioth.debian.org])
 AC_CONFIG_SRCDIR([src/minicom.c])
 AM_CONFIG_HEADER([config.h])
 AC_PREREQ(2.59)
