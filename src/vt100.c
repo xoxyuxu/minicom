@@ -427,7 +427,7 @@ static void state2(int c)
   }
   /* Separation between numbers ? */
   if (c == ';') {
-    if (ptr < 15)
+    if (ptr < 7)
       ptr++;
     return;
   }
