@@ -2,7 +2,7 @@
 #
 # $Id: autogen.sh,v 1.16 2009-11-15 20:00:56 al-guest Exp $
 
-AUTOMAKEVER=1.14
+AUTOMAKEVER=1.16
 
 set -x
 
