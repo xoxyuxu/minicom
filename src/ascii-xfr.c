@@ -207,7 +207,7 @@ int arecv(char *file)
   }
 
   while ((n = read(STDIN_FILENO, line, sizeof(line))) > 0) {
-    for (s = line; n-- >0; s++) {
+    for (s = line; s - line < n; s++) {
       if (*s == eofchar)
         break;
       if (dotrans && *s == '\r')
@@ -217,7 +217,7 @@ int arecv(char *file)
     }
     stats(first);
     first = 0;
-    if (*s == eofchar)
+    if (s - line < n && *s == eofchar)
       break;
   }
   fclose(fp);
