@@ -1865,6 +1865,7 @@ void doconv(void)
 int loadconv(char *buf)
 {
   FILE *fp;
+  int err = 0;
 
   if ((fp = fopen(pfix_home(buf), "rb")) == (FILE *)NULL) {
     werror(_("Cannot open conversion table %s"), pfix_home(buf));
@@ -1874,10 +1875,11 @@ int loadconv(char *buf)
       || fread(vt_outmap, sizeof(vt_outmap), (size_t)1, fp) != 1)
     {
       werror(_("Cannot read conversion table %s"), pfix_home(buf));
-      return 1;
+      err = 1;
     }
+
   fclose(fp);
-  return 0;
+  return err;
 }
 
 int saveconv(char *buf)
