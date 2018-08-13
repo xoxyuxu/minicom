@@ -74,6 +74,7 @@ void do_log(const char *line, ...)
 	  (ptr->tm_year)+1900, (ptr->tm_mon)+1, ptr->tm_mday,
 	  ptr->tm_hour, ptr->tm_min, ptr->tm_sec);
   vfprintf(logfile, line, ap);
+  va_end(ap);
   fprintf(logfile, "\n");
   fclose(logfile);
 #else
