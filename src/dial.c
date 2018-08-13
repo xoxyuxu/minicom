@@ -912,6 +912,7 @@ int readdialdir(void)
   if (fread(&dial_ver, sizeof(dial_ver), 1, fp) != 1)
     {
       werror(_("Failed to read dialing directory\n"));
+      fclose(fp);
       return -1;
     }
   if (dial_ver.magic != DIALMAGIC) {
@@ -947,12 +948,14 @@ int readdialdir(void)
           dial_ver.size > sizeof(struct v4_dialent)) {
         werror(_("Phonelist garbled (unknown version?)"));
         dialents = mkstdent();
+        fclose(fp);
         return -1;
       }
       break;
     case 5:
       if (dial_ver.size != sizeof(struct dialent)) {
 	werror(_("Phonelist corrupted"));
+        fclose(fp);
 	return -1;
       }
       break;
@@ -961,6 +964,7 @@ int readdialdir(void)
       // have different size on 32 and 64bit systems
       if (dial_ver.size != sizeof(struct dialent) - sizeof(void *)) {
         werror(_("Phonelist corrupted"));
+        fclose(fp);
         return -1;
       }
       break;
@@ -968,6 +972,7 @@ int readdialdir(void)
       werror(_("Unknown dialing directory version"));
       dendd = 1;
       dialents = mkstdent();
+      fclose(fp);
       return -1;
   }
 
