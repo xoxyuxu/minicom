@@ -228,6 +228,7 @@ int getsdir(const char *dirpath, const char *pattern, int sortflags,
           if (!*datptr)
             {
               free(*datptr);
+              closedir(dirp);
               return -1;
             }
 
