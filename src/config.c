@@ -88,6 +88,7 @@ void read_parms(void)
   for (f = PROTO_BASE; f < MAXPROTO; f++) {
     if (P_PNAME(f)[0] && P_PIORED(f) != 'Y' && P_PIORED(f) != 'N') {
       strncpy(buf, P_PNAME(f) - 2, sizeof(buf));
+      buf[sizeof(buf) - 1] = '\0';
       strcpy(P_PNAME(f), buf);
       P_PIORED(f) = 'Y';
       P_PFULL(f) = 'N';

@@ -386,6 +386,7 @@ void updown(int what, int nr)
             do_log("%s", trimbuf);
           } else if (!strncmp (buffirst, "Bytes", 5)) {
             strncpy (xfrstr, buf, sizeof(xfrstr));
+            xfrstr[sizeof(xfrstr) - 1] = '\0';
           }
           buffirst[0] = 0;
           trimbuf[0] = 0;
@@ -698,8 +699,11 @@ void runscript(int ask, const char *s, const char *l, const char *p)
     }
   } else {
     strncpy(scr_user, l, sizeof(scr_user));
+    scr_user[sizeof(scr_user) - 1] = '\0';
     strncpy(scr_name, s, sizeof(scr_name));
+    scr_name[sizeof(scr_name) - 1] = '\0';
     strncpy(scr_passwd, p, sizeof(scr_passwd));
+    scr_passwd[sizeof(scr_passwd) - 1] = '\0';
   }
   sprintf(scr_lines, "%d", (int) lines);  /* jl 13.09.97 */
 

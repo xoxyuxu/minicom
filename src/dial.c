@@ -829,8 +829,11 @@ static int v1_read(FILE *fp, struct dialent *d)
 
   memcpy(d->username, v1.username, sizeof(v1) - offsetof(struct v1_dialent, username));
   strncpy(d->name, v1.name, sizeof(d->name));
+  d->name[sizeof(d->name) - 1] = '\0';
   strncpy(d->number, v1.number, sizeof(d->number));
+  d->number[sizeof(d->number) - 1] = '\0';
   strncpy(d->script, v1.script, sizeof(d->script));
+  d->script[sizeof(d->script) - 1] = '\0';
   d->lastdate[0]=0;
   d->lasttime[0]=0;
   d->count=0;

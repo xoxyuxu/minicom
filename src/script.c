@@ -1099,12 +1099,14 @@ int main(int argc, char **argv)
 
   if (argc > 2) {
     strncpy(logfname, argv[2], sizeof(logfname));
+    logfname[sizeof(logfname) - 1] = '\0';
     if (argc > 3)
       strncpy(homedir, argv[3], sizeof(homedir));
     else if ((s = getenv("HOME")) != NULL)
       strncpy(homedir, s, sizeof(homedir));
     else
       homedir[0] = 0;
+    homedir[sizeof(homedir) - 1] = '\0';
   }
   else
     logfname[0] = 0;
