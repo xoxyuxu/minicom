@@ -536,7 +536,9 @@ static void doserial(void)
 {
   WIN *w;
   char *serial_device         = _(" A -    Serial Device      :");
+#if !HAVE_LOCKDEV
   char *lockfile_location     = _(" B - Lockfile Location     :");
+#endif
   char *callin_program        = _(" C -   Callin Program      :");
   char *callout_program       = _(" D -  Callout Program      :");
   char *bps_par_bits          = _(" E -    Bps/Par/Bits       :");
