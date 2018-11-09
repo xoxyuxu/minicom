@@ -951,9 +951,15 @@ dirty_goto:
         } else {
           wchar_t wc;
           size_t len = one_mbtowc(&wc, ptr, blen);
-          vt_out(c, wc);
-          blen -= len;
-          ptr += len;
+          if (len==0) {
+            buf_offset += blen;
+            blen = 0;
+          }
+          else {
+            vt_out(c, wc);
+            blen -= len;
+            ptr += len;
+          }
         }
         if (zauto && zsig[zpos] == 0) {
           dirflush = 1;

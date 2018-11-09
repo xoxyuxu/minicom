@@ -336,10 +336,12 @@ static void _gotoxy(int x, int y)
  * 'doit' can be  -1: only write to screen, not to memory
  *                 0: only write to memory, not to screen
  *                 1: write to both screen and memory
+ * Return number of required columns on display for the given string.
  */
-static void _write(wchar_t c, int doit, int x, int y, char attr, char color)
+static int _write(wchar_t c, int doit, int x, int y, char attr, char color)
 {
   ELM *e;
+  int cols = 1;
 
   /* If the terminal has automatic margins, we can't write to the
    * last line, last character. After scrolling, this "invisible"
@@ -366,26 +368,49 @@ static void _write(wchar_t c, int doit, int x, int y, char attr, char color)
         _setattr(attr, color);
       }
       x0 = x; y0 = y; attr0 = attr; color0 = color; c0 = c;
-      if ((attr & XA_ALTCHARSET) != 0)
-        outchar((char)c);
-      else {
-        char buf[MB_LEN_MAX];
+      if ((attr & XA_ALTCHARSET) != 0) {
+        if (c)
+            outchar((char)c);
+		curx++;
+	  }
+      else if (c!=L'\0') {
+        char buf[MB_LEN_MAX+1] = {0};
         size_t i, len;
 
         len = one_wctomb(buf, c);
         for (i = 0; i < len; i++)
           outchar(buf[i]);
+        curx++;
+        len = mbswidth(buf);
+        for (i=1; i<len; ++i) {
+            curx++;
+        }
       }
-
-      curx++;
     }
+
     if (doit >= 0) {
       e = &gmap[x + y * COLS];
       e->value = c;
       e->attr = attr;
       e->color = color;
-    }
+	  /* TODO: ws wrap check */
+      if ((attr & XA_ALTCHARSET) == 0) {
+        char buf[MB_LEN_MAX+1] = {0};
+        int i;
+
+        (void)one_wctomb(buf, c);
+		cols = mbswidth(buf) ;
+		for (i=1; i<cols; ++i) {
+		  x++;
+		  e = &gmap[x + y * COLS];
+		  e->value = L'\0';
+		  e->attr = 0;
+		  e->color = 0;
+		}
+	  }
+	}
   }
+return cols ;
 }
 
 /*
@@ -558,6 +583,18 @@ WIN *mc_wopen(int x1, int y1, int x2, int y2, int border, int attr,
     }
   }
 
+  /* check window border if violates the charactr which needs multi columns */
+  for (y = y1; y < y2; y++) {
+      e = gmap + stdwin->xs * y + x1;
+      for (x=x1; x+(int)MB_CUR_MAX>=x1 && x>=0 && e->value==L'\0'; --x)
+          --e;
+      while (x<x1) { // do not save membuf.
+          _write(' ', -1, x, y, xattr, color);
+          ++x;
+      }
+  }
+
+
   /* And draw the window */
   if (border) {
     _write(border == BSINGLE ? S_UL : D_UL, w->direct, x1, y1, xattr, color);
@@ -617,13 +654,25 @@ void mc_wclose(WIN *win, int replace)
       ELM *g;
       g = gmap + (y * stdwin->xs);
       for (x = 0 ; x < win->x1; x++) {
-        _write(g->value, 1, x, y, g->attr, g->color);
-        g++;
+        int n = _write(g->value, 1, x, y, g->attr, g->color);
+		g++;
+		while (n>1 && x < win->x1) {
+			n--;
+			g++;
+			x++;
+		}
       }
       /* to here */
       for (x = win->x1; x <= win->x2; x++) {
-        _write(e->value, 1, x, y, e->attr, e->color);
+        int n = 1;
+        if (e->value != L'\0')
+            n = _write(e->value, 1, x, y, e->attr, e->color);
         e++;
+        while (n>1 && x < win->x2) {
+            n--;
+            e++;
+            x++;
+        }
       }
     }
     _gotoxy(win->o_curx, win->o_cury);
@@ -669,7 +718,7 @@ void mc_wleave(void)
 
 void mc_wreturn(void)
 {
-  int x, y;
+  int x, y, n;
   ELM *e;
 
   curattr = -1;
@@ -690,8 +739,13 @@ void mc_wreturn(void)
   e = gmap;
   for (y = 0; y <LINES; y++) {
     for(x = 0; x < COLS; x++) {
-      _write(e->value, -1, x, y, e->attr, e->color);
+      n = _write(e->value, -1, x, y, e->attr, e->color);
       e++;
+	  while (n>1 && x<COLS) {
+		  x++;
+		  e++;
+		  n--;
+	  }
     }
   }
   _gotoxy(oldx, oldy);
@@ -728,8 +782,13 @@ void mc_wredraw(WIN *w, int newdirect)
 
   for (y = miny; y <= maxy; y++) {
     for(x = minx; x <= maxx; x++) {
-      _write(e->value, -1, x, y, e->attr, e->color);
+      int n = _write(e->value, -1, x, y, e->attr, e->color);
       e++;
+	  while (n>1 && x<=maxx) {
+		  n--;
+		  e++;
+		  x++;
+	  }
     }
     e += addcnt;
   }
@@ -905,8 +964,13 @@ void mc_wscroll(WIN *win, int dir)
       for (y = win->sy1 + 1; y <= win->sy2; y++) {
         e = gmap + y * COLS + win->x1;
         for (x = win->x1; x <= win->x2; x++) {
-          _write(e->value, win->direct && doit, x, y - 1, e->attr, e->color);
+          int n = _write(e->value, win->direct && doit, x, y - 1, e->attr, e->color);
           e++;
+		  while (n>1 &&  x <= win->x2) {
+			  n--;
+			  e++;
+			  x++;
+		  }
         }
       }
       win->curx = 0;
@@ -917,8 +981,13 @@ void mc_wscroll(WIN *win, int dir)
       for (y = win->sy2 - 1; y >= win->sy1; y--) {
         e = gmap + y * COLS + win->x1;
         for (x = win->x1; x <= win->x2; x++) {
-          _write(e->value, win->direct && doit, x, y + 1, e->attr, e->color);
+          int n = _write(e->value, win->direct && doit, x, y + 1, e->attr, e->color);
           e++;
+		  while (n>1 &&  x <= win->x2) {
+			  n--;
+			  e++;
+			  x++;
+		  }
         }
       }
       win->curx = 0;
@@ -968,6 +1037,7 @@ void mc_wlocate(WIN *win, int x, int y)
 void mc_wputc(WIN *win, wchar_t c)
 {
   int mv = 0;
+  int n;
 
   switch(c) {
     case '\r':
@@ -1012,13 +1082,16 @@ void mc_wputc(WIN *win, wchar_t c)
       if (c != '\n') {
 	if (!win->wrap && win->curx >= win->xs)
 	  c = '>';
-        _write(c, win->direct, win->curx + win->x1,
+        n = _write(c, win->direct, win->curx + win->x1,
                win->cury + win->y1, win->attr, win->color);
-        if (++win->curx >= win->xs && !win->wrap) {
-          win->curx--;
-          curx = 0; /* Force to move */
-          mv++;
-        }
+		for(;n>0;n--) {
+			win->curx++;
+			if (win->curx >= win->xs && !win->wrap) {
+				win->curx--;
+				curx = 0; /* Force to move */
+				mv++;
+			}
+		}
       }
       break;
   }
@@ -1036,9 +1109,14 @@ void mc_wdrawelm(WIN *w, int y, ELM *e)
 
   /* MARK updated 02/17/94 - Fixes bug, to do all 80 cols, not 79 cols */
   for (x = w->x1; x <= w->x2; x++) {
-    _write(e->value, w->direct, x, y + w->y1, e->attr, e->color);
+	  int n = _write(e->value, w->direct, x, y + w->y1, e->attr, e->color);
     /*y + w->y1, XA_NORMAL, e->color);*/
     e++;
+	while (n>1 && x <= w->x2) {
+		e++;
+		x++;
+		n--;
+	}
   }
 }
 
@@ -1066,24 +1144,34 @@ void mc_wdrawelm_var(WIN *w, ELM *e, wchar_t *buf)
 void mc_wdrawelm_inverse(WIN *w, int y, ELM *e)
 {
   int x;
+  int n;
 
   /* MARK updated 02/17/94 - Fixes bug, to do all 80 cols, not 79 cols */
   /* filipg 8/19/97: this will BOLD-up the line */
   /* first position */
   x = w->x1;
-  _write(e->value, w->direct, x, y + w->y1, XA_NORMAL, e->color);
-
+  n = _write(e->value, w->direct, x, y + w->y1, XA_NORMAL, e->color);
   e++;
+  while (--n) {
+	  e++;
+	  x++;
+  }
 
   /* everything in the middle will be BLINK */
-  for (x = w->x1 + 1; x <= w->x2 - 1; x++) {
-    _write(e->value, w->direct, x, y + w->y1, XA_BOLD, WHITE);
+  for (x=x+1; x <= w->x2 - 1; x++) {
+    n = _write(e->value, w->direct, x, y + w->y1, XA_BOLD, WHITE);
     e++;
+	while (n>1 && x <= w->x2 - 1) {
+		e++;
+		x++;
+		n--;
+	}
+
   }
 
   /* last position */
   x = w->x2;
-  _write(e->value, w->direct, x, y + w->y1, XA_NORMAL, e->color);
+  (void)_write(e->value, w->direct, x, y + w->y1, XA_NORMAL, e->color);
 }
 
 /*
@@ -1168,9 +1256,11 @@ void mc_wtitle(WIN *w, int pos, const char *s)
     _write('[', w->direct, x++, w->y1 - 1, w->attr, w->color);
   while (*s && x <= w->x2) {
     wchar_t wc;
+	int n;
 
     s += one_mbtowc(&wc, s, MB_LEN_MAX);
-    _write(wc, w->direct, x++, w->y1 - 1, w->attr, w->color);
+    n = _write(wc, w->direct, x++, w->y1 - 1, w->attr, w->color);
+	x += (n - 1);
   }
   if (x <= w->x2)
     _write(']', w->direct, x++, w->y1 - 1, w->attr, w->color);
@@ -1208,8 +1298,13 @@ void mc_wcurbar(WIN *w, int y, int attr)
     _write(x, w->direct, w->x1, y, attr, e->color);
   } else {
     for (x = w->x1; x <= w->x2; x++) {
-      _write(e->value, w->direct, x, y, attr, e->color);
+      int n = _write(e->value, w->direct, x, y, attr, e->color);
       e++;
+	  while (n>1 && x <= w->x2) {
+		  n--;
+		  x++;
+		  e++;
+	  }
     }
   }
   if ((VI == NULL || _curstype == CNORMAL) && w->direct)
@@ -1599,8 +1694,12 @@ void mc_winschar2(WIN *w, wchar_t c, int move)
   /* Write buffer to screen */
   e = buf;
   for (++x; x <= w->x2; x++) {
-    _write(e->value, doit && w->direct, x, y, e->attr, e->color);
+    int n = _write(e->value, doit && w->direct, x, y, e->attr, e->color);
     e++;
+	while (n>1 && x <= w->x2) {
+		x++;
+		e++;
+	}
   }
   free(buf);
 
@@ -1635,8 +1734,14 @@ void mc_wdelchar(WIN *w)
   e = gmap + y * COLS + x + 1;
 
   for (; x < w->x2; x++) {
-    _write(e->value, doit && w->direct, x, y, e->attr, e->color);
+	  int n;
+    n = _write(e->value, doit && w->direct, x, y, e->attr, e->color);
     e++;
+	while (n>1 && x < w->x2) {
+		e++;
+		x++;
+		n--;
+	}
   }
   _write(' ', doit && w->direct, x, y, w->attr, w->color);
   mc_wlocate(w, w->curx, w->cury);

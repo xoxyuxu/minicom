@@ -89,10 +89,17 @@ void do_log(const char *line, ...)
  * (wchar_t)*s */
 size_t one_mbtowc(wchar_t *pwc, const char *s, size_t n)
 {
-  mbtowc(NULL, 0, 0); // reset the conversion state
-  int len = mbtowc(pwc, s, n);
-  if (len == -1)
-    *pwc = *s;
+  static mbstate_t mbs;
+  int len;
+  memset(&mbs, 0, sizeof(mbs));
+  len = mbrtowc(pwc, s, n, &mbs);
+  if (len == -1) {
+    if (n > 0)
+      *pwc = *s;
+  }
+  else if (len == -2) {
+    return 0;
+  }
   if (len <= 0)
     len = 1;
   return len;
