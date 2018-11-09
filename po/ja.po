@@ -239,7 +239,7 @@ msgstr "モデムとダイヤルの設定"
 # c-format(wprintf)
 #: src/config.c:694
 msgid "    Return or Esc to exit. Edit A+B to get defaults."
-msgstr "    Return か Esc で終了。AとBの文字列は編集すると表示します。"
+msgstr "    Return か Esc で終了。AとBの文字列は編集時表示。"
 
 #: src/config.c:832
 msgid " A - Command key is         :"
@@ -424,17 +424,17 @@ msgstr "マクロを読み込みます"
 #: src/config.c:1188
 #, fuzzy
 msgid " A -      Terminal emulation :"
-msgstr " A - ターミナルの種類    :"
+msgstr " A - ターミナエミュレート    :"
 
 #: src/config.c:1189
 #, fuzzy
 msgid " B -     Backspace key sends :"
-msgstr " B - BS キーが送るコード :"
+msgstr " B -     BS キーが送るコード :"
 
 #: src/config.c:1190
 #, fuzzy
 msgid " C -          Status line is :"
-msgstr " C - ステータスライン    :"
+msgstr " C -        ステータスライン :"
 
 #: src/config.c:1191
 msgid " D -   Newline tx delay (ms) :"
@@ -446,7 +446,7 @@ msgstr " E -          ENQ 応答       :"
 
 #: src/config.c:1193
 msgid " F - Character tx delay (ms) :"
-msgstr " F - 文字の送信遅延(ミリ秒)  :"
+msgstr " F -  文字の送信遅延(ミリ秒) :"
 
 # wtitle
 #: src/config.c:1197
@@ -571,29 +571,27 @@ msgstr "通信パラメータ"
 # wputs
 #: src/config.c:1443
 msgid " Speed            Parity      Data\n"
-msgstr " 速度           パリティ       データ\n"
+msgstr " 速度             パリティ  データ\n"
 
 # wputs
 #: src/config.c:1444
-#, fuzzy
 msgid " A: <next>        L: None     S: 5\n"
-msgstr " A: 300           L: なし(N)      S: 5\n"
+msgstr " A: <次設定>      L: なし(N)  S: 5\n"
 
 # wputs
 #: src/config.c:1445
-#, fuzzy
 msgid " B: <prev>        M: Even     T: 6\n"
-msgstr " B: 1200          M: 偶数(E)      T: 6\n"
+msgstr " B: <前設定>      M: 偶数(E)  T: 6\n"
 
 # wputs
 #: src/config.c:1446
 msgid " C:   9600        N: Odd      U: 7\n"
-msgstr " C: 9600          N: 奇数(O)      U: 7\n"
+msgstr " C:   9600        N: 奇数(O)  U: 7\n"
 
 # wputs
 #: src/config.c:1447
 msgid " D:  38400        O: Mark     V: 8\n"
-msgstr " D: 38400         O: マーク       V: 8\n"
+msgstr " D:  38400        O: マーク   V: 8\n"
 
 #: src/config.c:1448
 msgid " E: 115200        P: Space\n"
@@ -1218,17 +1216,17 @@ msgstr "Minicom のコマンド一覧"
 #: src/help.c:45
 #, c-format
 msgid "Commands can be called by %s<key>"
-msgstr "コマンドを実行するには %s<キー>と入力してください"
+msgstr "コマンド実行は %s<キー>と入力"
 
 # wputs
 #: src/help.c:51
 msgid "Main Functions"
-msgstr "主な機能"
+msgstr "   主な機能   "
 
 # wputs
 #: src/help.c:53
 msgid "Other Functions"
-msgstr "他の機能"
+msgstr "   他の機能   "
 
 #: src/help.c:55
 msgid " Dialing directory..D  run script (Go)....G | Clear Screen.......C\n"
@@ -1706,15 +1704,15 @@ msgstr "行末折り返し: OFF"
 
 #: src/minicom.c:1640
 msgid "Timestamp every line (simple)"
-msgstr ""
+msgstr "毎行時刻表示(簡易)"
 
 #: src/minicom.c:1643
 msgid "Timestamp every line (extended)"
-msgstr ""
+msgstr "毎行時刻表示(詳細)"
 
 #: src/minicom.c:1646
 msgid "Timestamp lines every second"
-msgstr ""
+msgstr "毎秒時刻表示"
 
 # do_log
 #: src/minicom.c:1687

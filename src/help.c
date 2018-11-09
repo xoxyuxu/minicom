@@ -32,7 +32,7 @@ int help(void)
   int c;
   int x1, x2;
   const char *s;
-  char buf[40];
+  char buf[60];
 
   x1 = (COLS / 2) - 34;
   x2 = (COLS / 2) + 32;
