@@ -1016,32 +1016,6 @@ static void close_iconv(void)
 #endif
 /* -------------------------------------------- */
 
-static void test_mbswidth(void)
-{
-  struct entry {
-    size_t _mbswidth, _mbswidth_kaputt;
-    char *s;
-  };
-  struct entry e[] = {
-    { 14, 14, "要修改哪个选项", },
-    { 15, 15, "要修改哪	个选项", },
-    { 30, 30, "指令稿「%s」: 未預期結束的檔案" },
-    { 24, 24, "Répertoire des scripts :" },
-    { 25, 25, "Contrôle de flux matériel" },
-    { 14, 14, "リセット文字列" },
-    { 10,  5, "😂😀😄😏😒" }, // some report 5 here and draw overlapping smileys
-    { 10, 10, "1234567890" },
-  };
-
-  for (unsigned i = 0; i < sizeof(e) / sizeof(e[0]); ++i)
-    {
-      if (0)
-        printf("%d: mbswidth=%zd\n", i, mbswidth(e[i].s));
-      assert(mbswidth(e[i].s) == e[i]._mbswidth
-	     || mbswidth(e[i].s) == e[i]._mbswidth_kaputt);
-    }
-}
-
 static void usage_and_exit_if(bool expr, const char *fmt, ...)
 {
   if (!expr)
@@ -1195,8 +1169,6 @@ int main(int argc, char **argv)
 	(!e2 || !strcmp("C", e2) || !strcmp("POSIX", e2)))
       screen_ibmpc = screen_iso = 0;
   }
-
-  test_mbswidth();
 
   /* MARK updated 02/17/95 default history buffer size */
   num_hist_lines = 256;
