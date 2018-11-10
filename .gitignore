@@ -1,0 +1,18 @@
+#aclocal
+/aclocal.m4
+/autom4te.cache
+
+# autoheader
+config.h.in
+
+# automake
+/INSTALL
+/Makefile.in
+/ar-lib
+/compile
+/config.guess
+/config.sub
+/depcomp
+/install-sh
+/missing
+
