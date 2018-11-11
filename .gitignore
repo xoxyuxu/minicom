@@ -16,3 +16,11 @@ config.h.in
 /install-sh
 /missing
 
+# autoconf
+/configure
+stamp-h1
+/minicom.spec
+/Makefile
+/config.h
+/config.log
+/config.status
