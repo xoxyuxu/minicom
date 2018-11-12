@@ -1,7 +1,7 @@
 
 EXTRA_PROGRAMS = minicom.keyserv
 
-bin_PROGRAMS = minicom runscript ascii-xfr @KEYSERV@
+bin_PROGRAMS = minicom runluascript runscript ascii-xfr @KEYSERV@
 
 dist_bin_SCRIPTS = xminicom
 
@@ -13,6 +13,8 @@ minicom_SOURCES = minicom.c vt100.c config.c help.c updown.c \
 noinst_HEADERS = configsym.h defmap.h \
 	getsdir.h intl.h keyboard.h minicom.h \
 	port.h vt100.h window.h sysdep.h
+
+runluascript_SOURCES = scriptlua.c sysdep1_s.c common.c port.h minicom.h
 
 runscript_SOURCES = script.c sysdep1_s.c common.c port.h minicom.h
 
@@ -26,11 +28,12 @@ LDADD = $(MINICOM_LIBPORT)
 
 confdir = @MINICOM_CONFDIR@
 
-AM_CPPFLAGS = @CPPFLAGS@ -I$(top_srcdir)/lib -DCONFDIR=\"$(confdir)\" \
+AM_CPPFLAGS = @CPPFLAGS@ -I$(top_srcdir)/lib $(LUA_INCLUDE) -DCONFDIR=\"$(confdir)\" \
               -DLOCALEDIR=\"$(datadir)/locale\"
 
 minicom_LDADD = @LIBINTL@ $(LIBICONV) $(MINICOM_LIBPORT) $(LOCKDEV_LIBS)
 minicom_keyserv_LDADD = @LIBINTL@ $(MINICOM_LIBPORT)
 runscript_LDADD = @LIBINTL@ $(MINICOM_LIBPORT)
+runluascript_LDADD = @LIBINTL@  -llua$(LUA_VERSION) -lm -ldl
 
 EXTRA_DIST = functions.c

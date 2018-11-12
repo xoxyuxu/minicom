@@ -15,6 +15,7 @@ AC_USE_SYSTEM_EXTENSIONS
 dnl Checks for programs.
 AC_PROG_CC
 AM_PROG_AR
+AX_PROG_LUA
 
 AC_AIX
 AC_MINIX
@@ -125,6 +126,7 @@ dnl Checks for programs.
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION([0.16.1])
 
+
 dnl This is a hacky workaround as the m4 scripts for iconv seem to set
 dnl LIBICONV to '-liconv' despite that this lib is not available if iconv
 dnl functionality is coming out of libc. But we need -liconv for other
@@ -170,6 +172,7 @@ fi
 if test "x$found_termcap_h" != "x1"; then
   AC_CHECK_HEADERS(termcap.h)
 fi
+AX_LUA_HEADERS
 
 AC_CHECK_LIB(socket, socket)
 
