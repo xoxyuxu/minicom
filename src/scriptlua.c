@@ -53,7 +53,59 @@ bool verbose = true;
 const char *newline;                  /* What to print for '\n'. */
 struct line *thisline;                /* Line to be executed */
 
-static char inbuf[MAX_INBUF_SIZE + 1];/* Input buffer. */
+/* under construnction */
+/* are we need locking operation? No, This program is single thread. */
+struct {
+  char buf[MAX_INBUF_SIZE];
+  int idx_next_write;
+  int idx_next_read;
+  int len;
+  bool is_get_cr;
+} inbuf;
+
+static void inbuf_flush(void)
+{
+  inbuf.idx_next_write = 0;
+  inbuf.idx_next_read = 0;
+  inbuf.len = 0;
+  inbuf.is_get_cr = false;
+}
+
+static void inbuf_putc( char c )
+{
+  inbuf.buf[ inbuf.idx_next_write ] = c;
+  if (++inbuf.idx_next_write >= sizeof(inbuf.buf))
+    inbuf.idx_next_write = 0;
+
+  if (inbuf.idx_next_write == inbuf.idx_next_read) {
+    if (++inbuf.idx_next_read >= sizeof(inbuf.buf))
+      inbuf.idx_next_read = 0;
+  }
+  else
+    ++inbuf.len ;
+}
+
+static int inbuf_read( char* p, int maxlen )
+{
+  int len, totlen ;
+  if (inbuf.idx_next_read == inbuf.idx_next_write)
+    return 0;
+
+  totlen = maxlen < inbuf.len ? maxlen : inbuf.len;
+  if (inbuf.idx_next_read + totlen >= sizeof(inbuf.buf)) {
+    len = sizeof(inbuf.buf) - inbuf.idx_next_read;
+    memcpy(p, &inbuf.buf[inbuf.idx_next_read], len);
+    inbuf.idx_next_read = 0;
+    memcpy(p+len, &inbuf.buf[0], totlen - len);
+  }
+  else {
+    memcpy(p, &inbuf.buf[inbuf.idx_next_read], totlen);
+    inbuf.idx_next_read += totlen;
+  }
+  inbuf.len -= totlen;
+return totlen;
+}
+/* uinder construnction */
 
 
 /* Lua related files */
@@ -78,7 +130,7 @@ static char inbuf[MAX_INBUF_SIZE + 1];/* Input buffer. */
  * When verbose==true, this function outputs the character to
  * minicom via stderr.
  */
-static void readchar(void)
+static int readchar(char*buf)
 {
   char c;
   int n;
@@ -88,46 +140,42 @@ static void readchar(void)
       break;
 
   if (n <= 0)
-    return;
+    return 0;
 
-  /* Shift character into the buffer. */
-#ifdef _SYSV
-  memcpy(inbuf, inbuf + 1, MAX_INBUF_SIZE - 1);
-#else
-#  ifdef _BSD43
-  bcopy(inbuf + 1, inbuf, MAX_INBUF_SIZE - 1);
-#  else
-  /* This is Posix, I believe. */
-  memmove(inbuf, inbuf + 1, MAX_INBUF_SIZE - 1);
-#  endif
-#endif
   if (verbose)
     fputc(c, stderr);
-  inbuf[MAX_INBUF_SIZE - 1] = c;
+  *buf = c;
+  return 1;
 }
 
-/**
- * @brief See if a string just came in.
- *
- * @param[in] word  checked string
- *
- * @return  true  found it in the buffer.
- * @return  false not found it in the buffer.
- */
-static int expfound(const char *word)
+static int mc_readline(lua_State *L)
 {
-  int len;
+  luaL_Buffer b;
+  char c;
+  char *p;
+  int len = 0;
 
-  if (word == NULL) {
-    fprintf(stderr, _("NULL paramenter to %s!"), __func__);
-    exit(1);
+  if (sigsetjmp(ejmp, 1) != 0) {
+    /* this block execute when longjmp() executed, as timeout */
+    inexpect = false;
+    lua_pushboolean(L, false);
+    return 1;
   }
 
-  len = strlen(word);
-  if (len > MAX_INBUF_SIZE)
-    len = MAX_INBUF_SIZE;
-
-  return !strcmp(inbuf + MAX_INBUF_SIZE - len, word);
+  etimeout = etimeout_default ;
+  inexpect = true;
+  while (true) {
+    if (readchar(&c) ==0)
+      continue;
+    inbuf_putc(c);
+    if (c=='\n')
+      break;
+  }
+  p = luaL_buffinitsize(L, &b, inbuf.len);
+  lua_pushboolean(L, true);
+  len = inbuf_read( p, inbuf.len );
+  luaL_pushresultsize(&b, len - 1); /* truncate CR */
+  return 2;
 }
 
 /**
@@ -161,20 +209,27 @@ const char *p = luaL_checkstring(L,1);
 static int mc_expect (lua_State *L)
 {
   int arg_cnt, idx;
-  const char* seq[MAX_NUM_EXPECT + 1] = {0};
   volatile int found = 0;
+  struct {
+    const char* match;
+    const char* p;
+  } seq[MAX_NUM_EXPECT + 1] = {{0,}};
+  char c;
 
   arg_cnt = lua_gettop(L);
   if (arg_cnt>MAX_NUM_EXPECT)
     luaL_error(L, _("number of argument of expect() is less than or equal 16."),
         MAX_NUM_EXPECT); /* ithis function is not returned. */
+  if (arg_cnt<=0)
+    luaL_error(L, _("expect() needs atleast one argument."), MAX_NUM_EXPECT);
 
   for (idx=1; idx<=arg_cnt; ++idx) {
-    seq[idx-1] = luaL_optstring(L, idx, NULL);
-    if (seq[idx-1]==NULL)
+    seq[idx-1].match = luaL_optstring(L, idx, NULL);
+    if (seq[idx-1].match==NULL)
       fprintf(stderr, 
           "expect: arg #%d may be nil. So subsequent arguments are invalid.\r",
           idx);
+    seq[idx-1].p = seq[idx-1].match;
   }
 
   if (sigsetjmp(ejmp, 1) != 0) {
@@ -187,12 +242,19 @@ static int mc_expect (lua_State *L)
   etimeout = etimeout_default ;
   inexpect = true;
   while (!found) {
-    readchar();
-    for (idx = 0; seq[idx]; ++idx) {
-      if (expfound(seq[idx])) {
-        found = 1;
-        break;
+    if (readchar(&c) ==0)
+      continue;
+
+    for (idx = 0; seq[idx].match; ++idx) {
+      if (c == *seq[idx].p) {
+        ++seq[idx].p;
+        if (*seq[idx].p == '\0') {
+          found = 1;
+          break;
+        }
       }
+      else
+        seq[idx].p = seq[idx].match;
     }
   }
   lua_pushinteger(L, 1 + idx);
@@ -241,8 +303,8 @@ int mc_pipedshell(lua_State *L)
   else
     laststatus = status;
   m_flush(0);
-  memset(inbuf, 0, sizeof(inbuf));
 
+  inbuf_flush();
   lua_pushboolean(L, true);
   lua_pushinteger(L, status);
 
@@ -288,7 +350,7 @@ static int mc_flush(lua_State *L)
   (void)L;
   /* Before we send anything, flush input buffer. */
   m_flush(0);
-  memset(inbuf, 0, sizeof(inbuf));
+  inbuf_flush();
   return 0;
 }
 
@@ -405,6 +467,7 @@ static const luaL_Reg minicomlib[] = {
   {"print",   mc_print},
   {"timeout",   mc_timeout},
   {"verbose",   mc_verbose},
+  {"readline",  mc_readline},
   {NULL, NULL}
 };
 
@@ -499,7 +562,7 @@ int main(int argc, char **argv)
 
   do_args(argc, argv);
 
-  memset(inbuf, 0, sizeof(inbuf));
+  inbuf_flush();
 
   if (argc > 2) {
     strncpy(logfname, argv[2], sizeof(logfname));
